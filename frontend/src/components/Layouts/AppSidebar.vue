@@ -156,6 +156,7 @@ import OrganizationsIcon from '@/components/Icons/OrganizationsIcon.vue'
 import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import TaskIcon from '@/components/Icons/TaskIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
+import { ticketNavLink, ticketIconMap } from '@/ticketNav'
 import CollapseSidebar from '@/components/Icons/CollapseSidebar.vue'
 import NotificationsIcon from '@/components/Icons/NotificationsIcon.vue'
 import HelpIcon from '@/components/Icons/HelpIcon.vue'
@@ -222,6 +223,7 @@ const links = [
     icon: OrganizationsIcon,
     to: 'Organizations',
   },
+  ticketNavLink,
   {
     label: 'Notes',
     icon: NoteIcon,
@@ -287,6 +289,8 @@ function parseView(views) {
 
 function getIcon(routeName, icon) {
   if (icon) return icon
+
+  if (ticketIconMap[routeName]) return ticketIconMap[routeName]
 
   switch (routeName) {
     case 'Leads':

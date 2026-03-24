@@ -6,6 +6,11 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 from crm.fcrm.doctype.crm_dashboard.crm_dashboard import create_default_manager_dashboard
 from crm.fcrm.doctype.crm_products.crm_products import create_product_details_script
+from crm.ticket_setup import (
+	get_ticket_quick_entry_layouts,
+	get_ticket_sidebar_layouts,
+	get_ticket_data_fields_layouts,
+)
 
 
 def before_install():
@@ -178,6 +183,7 @@ def add_default_fields_layout(force=False):
 			"doctype": "CRM Call Log",
 			"layout": '[{"name":"details_section","columns":[{"name":"column_uMSG","fields":["type","from","duration"]},{"name":"column_wiZT","fields":["to","status","caller","receiver"]}]}]',
 		},
+		**get_ticket_quick_entry_layouts(),
 	}
 
 	sidebar_fields_layouts = {
@@ -197,6 +203,7 @@ def add_default_fields_layout(force=False):
 			"doctype": "CRM Organization",
 			"layout": '[{"label": "Details", "name": "details_section", "opened": true, "columns": [{"name": "column_IJOV", "fields": ["organization_name", "website", "territory", "industry", "no_of_employees", "address"]}]}]',
 		},
+		**get_ticket_sidebar_layouts(),
 	}
 
 	data_fields_layouts = {
@@ -208,6 +215,7 @@ def add_default_fields_layout(force=False):
 			"doctype": "CRM Deal",
 			"layout": '[{"name":"first_tab","sections":[{"label":"Details","name":"details_section","opened":true,"columns":[{"name":"column_z9XL","fields":["organization","annual_revenue","next_step"]},{"name":"column_gM4w","fields":["website","closed_date","deal_owner"]},{"name":"column_gWmE","fields":["territory","probability"]}]},{"label":"Products","name":"section_jHhQ","opened":true,"columns":[{"name":"column_xiNF","fields":["products"]}],"editingLabel":false,"hideLabel":true},{"label":"New Section","name":"section_WNOQ","opened":true,"columns":[{"name":"column_ziBW","fields":["total"]},{"label":"","name":"column_wuwA","fields":["net_total"]}],"hideBorder":true,"hideLabel":true}]}]',
 		},
+		**get_ticket_data_fields_layouts(),
 	}
 
 	for layout in quick_entry_layouts:

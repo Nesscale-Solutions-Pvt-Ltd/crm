@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { usersStore } from '@/stores/users'
 import { sessionStore } from '@/stores/session'
 import { viewsStore } from '@/stores/views'
+import { ticketRoutes, ticketTabRoutes, ticketViewRoutes, ticketDoctypeMap } from '@/ticketRoutes'
 
 const routes = [
   {
@@ -42,6 +43,7 @@ const routes = [
     component: () => import(`@/pages/${handleMobileView('Deal')}.vue`),
     props: true,
   },
+  ...ticketRoutes,
   {
     alias: '/notes',
     path: '/notes/view/:viewType?',
@@ -167,8 +169,8 @@ router.beforeEach(async (to, from, next) => {
     window.location.href = '/login?redirect-to=/crm'
   } else if (to.matched.length === 0) {
     next({ name: 'Invalid Page' })
-  } else if (['Deal', 'Lead'].includes(to.name) && !to.hash) {
-    let storageKey = to.name === 'Deal' ? 'lastDealTab' : 'lastLeadTab'
+  } else if (['Deal', 'Lead', ...ticketTabRoutes].includes(to.name) && !to.hash) {
+    let storageKey = to.name === 'Deal' ? 'lastDealTab' : to.name === 'Lead' ? 'lastLeadTab' : 'lastTicketTab'
     const activeTab = localStorage.getItem(storageKey) || 'activity'
     const hash = '#' + activeTab
     next({ ...to, hash })
@@ -181,6 +183,7 @@ router.beforeEach(async (to, from, next) => {
       'Notes',
       'Tasks',
       'Call Logs',
+      ...ticketViewRoutes,
     ].includes(to.name) &&
     !to.query?.view
   ) {
@@ -199,6 +202,7 @@ router.beforeEach(async (to, from, next) => {
         Notes: 'FCRM Note',
         Tasks: 'CRM Task',
         'Call Logs': 'CRM Call Log',
+        ...ticketDoctypeMap,
       }
 
       const doctype = doctypeMap[to.name]
