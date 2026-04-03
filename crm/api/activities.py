@@ -632,6 +632,7 @@ def get_linked_tasks(name: str):
 			"status",
 			"modified",
 			"creation",
+			"custom_task_type",
 		],
 	)
 	return tasks or []

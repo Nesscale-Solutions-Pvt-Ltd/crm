@@ -96,6 +96,17 @@
               </template>
             </Button>
           </Dropdown>
+          <FormControl
+            v-model="_task.custom_task_type"
+            type="select"
+            :options="[
+              { label: __(''), value: '' },
+              { label: __('Call'), value: 'Call' },
+              { label: __('Email'), value: 'Email' },
+              { label: __('Chat'), value: 'Chat' },
+            ]"
+            :placeholder="__('Task Type')"
+          />
         </div>
       </div>
     </template>
@@ -160,6 +171,7 @@ const _task = ref({
   due_date: '',
   status: 'Backlog',
   priority: 'Low',
+  custom_task_type: '',
   reference_doctype: props.doctype,
   reference_docname: null,
 })

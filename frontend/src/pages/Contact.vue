@@ -14,99 +14,221 @@
       />
     </template>
   </LayoutHeader>
-  <div v-if="contact.doc" ref="parentRef" class="flex h-full">
-    <Resizer
-      v-if="contact.doc"
-      :parent="$refs.parentRef"
-      class="flex h-full flex-col overflow-hidden border-r"
+  <div v-if="contact.doc" class="flex h-full overflow-hidden">
+    <Tabs
+      v-model="tabIndex"
+      :tabs="tabs"
+      class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tablist']]:px-5 [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
     >
-      <div class="border-b">
-        <FileUploader
-          :validateFile="validateIsImageFile"
-          @success="changeContactImage"
-        >
-          <template #default="{ openFileSelector, error }">
-            <div class="flex flex-col items-start justify-start gap-4 p-5">
-              <div class="flex gap-4 items-center">
-                <div class="group relative h-15.5 w-15.5">
-                  <Avatar
-                    size="3xl"
-                    class="h-15.5 w-15.5"
-                    :label="contact.doc.full_name"
-                    :image="contact.doc.image"
+      <template #tab-panel="{ tab }">
+        <div v-if="tab.label === 'Data'" class="h-full flex flex-col px-3 sm:px-10">
+          <DataFields
+            :doctype="'Contact'"
+            :docname="contact.doc.name"
+          />
+        </div>
+        <div v-if="tab.label === 'Leads'" class="flex flex-1 flex-col overflow-hidden">
+          <ListView
+            v-if="leadRows.length"
+            class="mt-4"
+            :columns="leadColumns"
+            :rows="leadRows"
+            :options="{
+              getRowRoute: (row) => ({
+                name: 'Lead',
+                params: { leadId: row.name },
+              }),
+              selectable: false,
+              showTooltip: false,
+            }"
+            row-key="name"
+          >
+            <ListRows v-slot="{ idx, column, item, row }" :rows="leadRows" doctype="CRM Lead">
+              <ListRowItem :item="item" :align="column.align">
+                <template #prefix>
+                  <UserAvatar
+                    v-if="column.key === 'lead_owner' && item.label"
+                    :user="item.user"
+                    size="sm"
                   />
-                  <component
-                    :is="contact.doc.image ? Dropdown : 'div'"
-                    v-bind="
-                      contact.doc.image
-                        ? {
-                            options: [
-                              {
-                                icon: 'upload',
-                                label: contact.doc.image
-                                  ? __('Change Image')
-                                  : __('Upload Image'),
-                                onClick: openFileSelector,
-                              },
-                              {
-                                icon: 'trash-2',
-                                label: __('Remove Image'),
-                                onClick: () => changeContactImage(''),
-                              },
-                            ],
-                          }
-                        : { onClick: openFileSelector }
-                    "
-                    class="!absolute bottom-0 left-0 right-0"
-                  >
-                    <div
-                      class="z-1 absolute bottom-0 left-0 right-0 flex h-14 cursor-pointer items-center justify-center rounded-b-full bg-black bg-opacity-40 pt-5 opacity-0 duration-300 ease-in-out group-hover:opacity-100"
-                      style="
-                        -webkit-clip-path: inset(22px 0 0 0);
-                        clip-path: inset(22px 0 0 0);
-                      "
-                    >
-                      <CameraIcon class="h-6 w-6 cursor-pointer text-white" />
-                    </div>
-                  </component>
+                </template>
+                <template #default="{ label }">
+                  <Badge
+                    v-if="column.key === 'status'"
+                    variant="subtle"
+                    :theme="item.color"
+                    size="md"
+                    :label="label"
+                  />
+                </template>
+              </ListRowItem>
+            </ListRows>
+          </ListView>
+          <EmptyState v-else :icon="LeadsIcon" name="Leads" />
+        </div>
+        <div v-if="tab.label === 'Tickets'" class="flex flex-1 flex-col overflow-hidden">
+          <ListView
+            v-if="ticketRows.length"
+            class="mt-4"
+            :columns="ticketColumns"
+            :rows="ticketRows"
+            :options="{
+              getRowRoute: (row) => ({
+                name: 'Ticket',
+                params: { ticketId: row.name },
+              }),
+              selectable: false,
+              showTooltip: false,
+            }"
+            row-key="name"
+          >
+            <ListRows v-slot="{ idx, column, item, row }" :rows="ticketRows" doctype="HD Ticket">
+              <ListRowItem :item="item" :align="column.align">
+                <template #default="{ label }">
+                  <Badge
+                    v-if="column.key === 'status' || column.key === 'priority'"
+                    variant="subtle"
+                    :theme="column.key === 'priority' ? getPriorityColor(label) : 'gray'"
+                    size="md"
+                    :label="label"
+                  />
+                </template>
+              </ListRowItem>
+            </ListRows>
+          </ListView>
+          <EmptyState v-else :icon="TicketsIcon" name="Tickets" />
+        </div>
+        <div v-if="tab.label === 'Notes'" class="h-full flex flex-col px-3 sm:px-10">
+          <div class="my-3 flex items-center justify-between sm:mb-4 sm:mt-8">
+            <div class="text-xl font-semibold text-ink-gray-8">
+              {{ __('Notes') }}
+            </div>
+            <Button
+              variant="solid"
+              :label="__('New Note')"
+              iconLeft="plus"
+              @click="showNoteModal = true; editingNote = {}"
+            />
+          </div>
+          <div
+            v-if="notes.data?.length"
+            class="grid grid-cols-1 gap-4 pb-3 sm:pb-5 lg:grid-cols-2 xl:grid-cols-3"
+          >
+            <div
+              v-for="note in notes.data"
+              :key="note.name"
+              @click="editingNote = note; showNoteModal = true"
+            >
+              <NoteArea v-model="notes" :note="note" />
+            </div>
+          </div>
+          <EmptyState v-else :icon="NoteIcon" name="Notes" />
+          <NoteModal
+            v-model="showNoteModal"
+            v-model:reloadNotes="notes"
+            :note="editingNote"
+            doctype="Contact"
+            :doc="contact.doc.name"
+          />
+        </div>
+      </template>
+    </Tabs>
+    <Resizer class="flex flex-col justify-between border-l" side="right">
+      <div
+        class="flex h-[45px] cursor-copy items-center border-b px-5 py-2.5 text-lg font-medium text-ink-gray-9"
+        @click="copyToClipboard(props.contactId)"
+      >
+        {{ __(props.contactId) }}
+      </div>
+      <FileUploader
+        :validateFile="validateIsImageFile"
+        @success="changeContactImage"
+      >
+        <template #default="{ openFileSelector, error }">
+          <div class="flex items-center justify-start gap-5 border-b p-5">
+            <div class="group relative size-12">
+              <Avatar
+                size="3xl"
+                class="size-12"
+                :label="contact.doc.full_name"
+                :image="contact.doc.image"
+              />
+              <component
+                :is="contact.doc.image ? Dropdown : 'div'"
+                v-bind="
+                  contact.doc.image
+                    ? {
+                        options: [
+                          {
+                            icon: 'upload',
+                            label: __('Change Image'),
+                            onClick: openFileSelector,
+                          },
+                          {
+                            icon: 'trash-2',
+                            label: __('Remove Image'),
+                            onClick: () => changeContactImage(''),
+                          },
+                        ],
+                      }
+                    : { onClick: openFileSelector }
+                "
+                class="!absolute bottom-0 left-0 right-0"
+              >
+                <div
+                  class="z-1 absolute bottom-0.5 left-0 right-0.5 flex h-9 cursor-pointer items-center justify-center rounded-b-full bg-black bg-opacity-40 pt-3 opacity-0 duration-300 ease-in-out group-hover:opacity-100"
+                  style="-webkit-clip-path: inset(12px 0 0 0); clip-path: inset(12px 0 0 0)"
+                >
+                  <CameraIcon class="size-4 cursor-pointer text-white" />
                 </div>
-                <div class="flex flex-col gap-2 truncate text-ink-gray-9">
-                  <div class="truncate text-2xl font-medium">
-                    <span v-if="contact.doc.salutation">
-                      {{ contact.doc.salutation + ' ' }}
-                    </span>
-                    <span>{{ contact.doc.full_name }}</span>
-                  </div>
-                  <div
-                    v-if="contact.doc.company_name"
-                    class="flex items-center gap-1.5 text-base text-ink-gray-8"
-                  >
-                    {{ contact.doc.company_name }}
-                  </div>
-                  <ErrorMessage :message="__(error)" />
-                </div>
+              </component>
+            </div>
+            <div class="flex flex-col gap-2.5 truncate">
+              <div class="truncate text-2xl font-medium text-ink-gray-9">
+                <span v-if="contact.doc.salutation">
+                  {{ contact.doc.salutation + ' ' }}
+                </span>
+                <span>{{ contact.doc.full_name }}</span>
+              </div>
+              <div
+                v-if="contact.doc.company_name"
+                class="flex items-center gap-1.5 text-base text-ink-gray-8"
+              >
+                {{ contact.doc.company_name }}
               </div>
               <div class="flex gap-1.5">
                 <Button
-                  v-if="callEnabled && contact.doc.mobile_no"
-                  :label="__('Make Call')"
-                  size="sm"
-                  :iconLeft="PhoneIcon"
-                  @click="callEnabled && makeCall(contact.doc.mobile_no)"
+                  v-if="callEnabled"
+                  :tooltip="__('Make a Call')"
+                  :icon="PhoneIcon"
+                  @click="
+                    () =>
+                      contact.doc.mobile_no
+                        ? makeCall(contact.doc.mobile_no)
+                        : toast.error(
+                            __('Please set a mobile number to make calls'),
+                          )
+                  "
+                />
+                <Button
+                  :tooltip="__('Attach a File')"
+                  :icon="AttachmentIcon"
+                  @click="showFilesUploader = true"
                 />
                 <Button
                   v-if="canDelete"
-                  :label="__('Delete')"
+                  :tooltip="__('Delete')"
+                  variant="subtle"
                   theme="red"
-                  size="sm"
-                  iconLeft="trash-2"
+                  icon="trash-2"
                   @click="deleteContact()"
                 />
               </div>
+              <ErrorMessage :message="__(error)" />
             </div>
-          </template>
-        </FileUploader>
-      </div>
+          </div>
+        </template>
+      </FileUploader>
       <div
         v-if="sections.data"
         class="flex flex-1 flex-col justify-between overflow-hidden"
@@ -119,46 +241,16 @@
         />
       </div>
     </Resizer>
-    <Tabs
-      v-model="tabIndex"
-      as="div"
-      :tabs="tabs"
-      class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tablist']]:px-5 [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
-    >
-      <template #tab-item="{ tab, selected }">
-        <button
-          class="group flex items-center gap-2 border-b border-transparent py-2.5 text-base text-ink-gray-5 duration-300 ease-in-out hover:text-ink-gray-9"
-          :class="{ 'text-ink-gray-9': selected }"
-        >
-          <component :is="tab.icon" v-if="tab.icon" class="h-5" />
-          {{ __(tab.label) }}
-          <Badge
-            class="group-hover:bg-surface-gray-7"
-            :class="[selected ? 'bg-surface-gray-7' : 'bg-gray-600']"
-            variant="solid"
-            theme="gray"
-            size="sm"
-          >
-            {{ tab.count }}
-          </Badge>
-        </button>
-      </template>
-      <template #tab-panel="{ tab }">
-        <DealsListView
-          v-if="tab.label === 'Deals' && rows.length"
-          class="mt-4"
-          :rows="rows"
-          :columns="columns"
-          :options="{ selectable: false, showTooltip: false }"
-        />
-        <EmptyState v-if="!rows.length" :icon="tab.icon" name="Deals" />
-      </template>
-    </Tabs>
   </div>
   <ErrorPage
     v-else-if="errorTitle"
     :errorTitle="errorTitle"
     :errorMessage="errorMessage"
+  />
+  <FilesUploader
+    v-model="showFilesUploader"
+    doctype="Contact"
+    :docname="contact.doc.name"
   />
   <DeleteLinkedDocModal
     v-if="showDeleteLinkedDocModal"
@@ -176,15 +268,27 @@ import Icon from '@/components/Icon.vue'
 import SidePanelLayout from '@/components/SidePanelLayout.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
+import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import CameraIcon from '@/components/Icons/CameraIcon.vue'
+import FilesUploader from '@/components/FilesUploader/FilesUploader.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
+import LeadsIcon from '@/components/Icons/LeadsIcon.vue'
+import TicketsIcon from '@/components/Icons/TicketsIcon.vue'
+import NoteIcon from '@/components/Icons/NoteIcon.vue'
+import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
+import NoteArea from '@/components/Activities/NoteArea.vue'
+import NoteModal from '@/components/Modals/NoteModal.vue'
 import DealsListView from '@/components/ListViews/DealsListView.vue'
+import DataFields from '@/components/Activities/DataFields.vue'
+import ListRows from '@/components/ListViews/ListRows.vue'
 import CustomActions from '@/components/CustomActions.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import {
   formatDate,
   timeAgo,
   validateIsImageFile,
   setupCustomizations,
+  copyToClipboard,
 } from '@/utils'
 import { getView } from '@/utils/view'
 import { useDocument } from '@/data/document'
@@ -206,6 +310,9 @@ import {
   usePageMeta,
   Dropdown,
   toast,
+  Badge,
+  ListView,
+  ListRowItem,
 } from 'frappe-ui'
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -216,7 +323,7 @@ const { makeCall, $dialog, $socket } = globalStore()
 
 const { getUser } = usersStore()
 const { getOrganization } = organizationsStore()
-const { getDealStatus } = statusesStore()
+const { getDealStatus, getLeadStatus } = statusesStore()
 const { doctypeMeta } = getMeta('Contact')
 
 const props = defineProps({
@@ -274,6 +381,9 @@ usePageMeta(() => {
   }
 })
 const showDeleteLinkedDocModal = ref(false)
+const showFilesUploader = ref(false)
+const showNoteModal = ref(false)
+const editingNote = ref({})
 
 async function deleteContact() {
   showDeleteLinkedDocModal.value = true
@@ -291,15 +401,50 @@ function changeContactImage(file) {
 const tabIndex = ref(0)
 const tabs = [
   {
-    label: 'Deals',
-    icon: DealsIcon,
-    count: computed(() => deals.data?.length),
+    label: 'Data',
+    icon: DetailsIcon,
+  },
+  {
+    label: 'Leads',
+    icon: LeadsIcon,
+    count: computed(() => leads.data?.length),
+  },
+  {
+    label: 'Tickets',
+    icon: TicketsIcon,
+    count: computed(() => tickets.data?.length),
+  },
+  {
+    label: 'Notes',
+    icon: NoteIcon,
+    count: computed(() => notes.data?.length),
   },
 ]
 
 const deals = createResource({
   url: 'crm.api.contact.get_linked_deals',
   cache: ['deals', props.contactId],
+  params: { contact: props.contactId },
+  auto: true,
+})
+
+const leads = createResource({
+  url: 'crm.api.contact.get_linked_leads',
+  cache: ['leads', props.contactId],
+  params: { contact: props.contactId },
+  auto: true,
+})
+
+const tickets = createResource({
+  url: 'crm.api.contact.get_linked_tickets',
+  cache: ['tickets', props.contactId],
+  params: { contact: props.contactId },
+  auto: true,
+})
+
+const notes = createResource({
+  url: 'crm.api.contact.get_linked_notes',
+  cache: ['contact_notes', props.contactId],
   params: { contact: props.contactId },
   auto: true,
 })
@@ -549,6 +694,69 @@ const dealColumns = [
   },
 ]
 
+// Lead rows and columns
+const leadRows = computed(() => {
+  if (!leads.data) return []
+  return leads.data.map((lead) => ({
+    name: lead.name,
+    lead_name: lead.lead_name,
+    status: {
+      label: lead.status,
+      color: getLeadStatus(lead.status)?.color,
+    },
+    email: lead.email,
+    mobile_no: lead.mobile_no,
+    lead_owner: {
+      label: lead.lead_owner && getUser(lead.lead_owner).full_name,
+      user: lead.lead_owner,
+      ...(lead.lead_owner && getUser(lead.lead_owner)),
+    },
+    modified: {
+      label: formatDate(lead.modified),
+      timeAgo: __(timeAgo(lead.modified)),
+    },
+  }))
+})
+
+const leadColumns = [
+  { label: __('Name'), key: 'lead_name', width: '12rem' },
+  { label: __('Status'), key: 'status', width: '10rem' },
+  { label: __('Email'), key: 'email', width: '12rem' },
+  { label: __('Mobile No.'), key: 'mobile_no', width: '11rem' },
+  { label: __('Lead Owner'), key: 'lead_owner', width: '10rem' },
+  { label: __('Last Modified'), key: 'modified', width: '8rem' },
+]
+
+// Ticket rows and columns
+const ticketRows = computed(() => {
+  if (!tickets.data) return []
+  return tickets.data.map((ticket) => ({
+    name: ticket.name,
+    subject: ticket.subject,
+    status: { label: ticket.status },
+    priority: { label: ticket.priority },
+    contact: ticket.contact,
+    agent: ticket.agent,
+    modified: {
+      label: formatDate(ticket.modified),
+      timeAgo: __(timeAgo(ticket.modified)),
+    },
+  }))
+})
+
+const ticketColumns = [
+  { label: __('ID'), key: 'name', width: '8rem' },
+  { label: __('Subject'), key: 'subject', width: '16rem' },
+  { label: __('Status'), key: 'status', width: '9rem' },
+  { label: __('Priority'), key: 'priority', width: '9rem' },
+  { label: __('Last Modified'), key: 'modified', width: '8rem' },
+]
+
+function getPriorityColor(priority) {
+  const map = { Urgent: 'red', High: 'orange', Medium: 'blue', Low: 'gray' }
+  return map[priority] || 'gray'
+}
+
 function openAddressModal(_address) {
   showAddressModal.value = true
   addressProps.value = {
@@ -579,3 +787,11 @@ watch(
   { once: true },
 )
 </script>
+
+<style scoped>
+/* Prevent border on Data Fields even if layout has multiple tabs */
+:deep(.border.border-outline-gray-1.rounded-lg) {
+  border: none !important;
+  border-radius: 0 !important;
+}
+</style>

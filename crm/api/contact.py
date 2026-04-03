@@ -64,6 +64,93 @@ def get_linked_deals(contact: str):
 
 
 @frappe.whitelist()
+def get_linked_leads(contact: str):
+	"""Get linked leads for a contact"""
+
+	if not frappe.has_permission("Contact", "read", contact):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	lead_names = frappe.get_all(
+		"CRM Contacts",
+		filters={"contact": contact, "parenttype": "CRM Lead"},
+		fields=["parent"],
+		distinct=True,
+	)
+
+	leads = []
+	for d in lead_names:
+		lead = frappe.db.get_value(
+			"CRM Lead",
+			d.parent,
+			[
+				"name",
+				"lead_name",
+				"status",
+				"email",
+				"mobile_no",
+				"lead_owner",
+				"modified",
+			],
+			as_dict=True,
+		)
+		if lead:
+			leads.append(lead)
+
+	return leads
+
+
+@frappe.whitelist()
+def get_linked_tickets(contact: str):
+	"""Get linked HD Tickets for a contact"""
+
+	if not frappe.has_permission("Contact", "read", contact):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	contact_doc = frappe.get_cached_doc("Contact", contact)
+	phone_numbers = [p.phone for p in contact_doc.phone_nos] if contact_doc.phone_nos else []
+
+	# Build OR filters: contact link OR matching phone numbers
+	or_filters = [["contact", "=", contact]]
+	for phone in phone_numbers:
+		or_filters.append(["custom_phone_number", "=", phone])
+
+	tickets = frappe.get_all(
+		"HD Ticket",
+		or_filters=or_filters,
+		fields=[
+			"name",
+			"subject",
+			"status",
+			"priority",
+			"contact",
+			"custom_phone_number",
+			"modified",
+		],
+		order_by="modified desc",
+		distinct=True,
+	)
+
+	return tickets
+
+
+@frappe.whitelist()
+def get_linked_notes(contact: str):
+	"""Get linked notes for a contact"""
+
+	if not frappe.has_permission("Contact", "read", contact):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	notes = frappe.db.get_all(
+		"FCRM Note",
+		filters={"reference_doctype": "Contact", "reference_docname": contact},
+		fields=["name", "title", "content", "owner", "modified", "creation"],
+		order_by="modified desc",
+	)
+
+	return notes or []
+
+
+@frappe.whitelist()
 def create_new(contact: str, field: str, value: str):
 	"""Create new email or phone for a contact"""
 	if not frappe.has_permission("Contact", "write", contact):
