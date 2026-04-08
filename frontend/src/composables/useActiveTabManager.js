@@ -3,7 +3,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDebounceFn, useStorage } from '@vueuse/core'
 
 export function useActiveTabManager(tabs, storageKey) {
-  const activeTab = useStorage(storageKey, 'activity')
+  const activeTab = useStorage(storageKey, 'data')
   const route = useRoute()
   const router = useRouter()
 

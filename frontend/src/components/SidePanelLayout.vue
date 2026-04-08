@@ -441,7 +441,8 @@ function parsedSection(section, editButtonAdded) {
     isMobileView.value ||
     !isManager() ||
     isContactSection ||
-    editButtonAdded
+    editButtonAdded ||
+    section.editable === false
   )
 
   section.visible =

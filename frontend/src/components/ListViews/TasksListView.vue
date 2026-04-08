@@ -33,18 +33,28 @@
       </ListHeaderItem>
     </ListHeader>
     <ListRows
-      v-slot="{ idx, column, item }"
+      v-slot="{ idx, column, item, row }"
       class="mx-3 sm:mx-5"
       :rows="rows"
       doctype="CRM Task"
     >
       <div v-if="column.key === 'due_date' && item">
         <Tooltip :text="item && formatDate(item, 'ddd, MMM D, YYYY | hh:mm a')">
-          <div class="flex items-center gap-2 truncate text-base">
+          <div
+            class="flex items-center gap-2 truncate text-base"
+            :class="isOverdue(item, row.status) ? 'text-ink-red-4 font-medium' : ''"
+          >
             <div><CalendarIcon /></div>
             <div class="truncate">
               {{ formatDate(item, 'D MMM, hh:mm a') }}
             </div>
+            <Badge
+              v-if="isOverdue(item, row.status)"
+              variant="subtle"
+              theme="red"
+              size="sm"
+              :label="__('Overdue')"
+            />
           </div>
         </Tooltip>
       </div>
@@ -167,6 +177,7 @@ import ListRows from '@/components/ListViews/ListRows.vue'
 import { formatDate, isTranslatable } from '@/utils'
 import {
   Avatar,
+  Badge,
   ListView,
   ListHeader,
   ListHeaderItem,
@@ -224,6 +235,11 @@ function isLiked(item) {
     let likedByMe = JSON.parse(item)
     return likedByMe.includes(user)
   }
+}
+
+function isOverdue(dueDate, status) {
+  if (!dueDate || status === 'Done') return false
+  return new Date(dueDate) < new Date()
 }
 
 watch(pageLengthCount, (val, old_value) => {

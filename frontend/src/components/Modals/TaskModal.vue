@@ -169,7 +169,7 @@ const _task = ref({
   description: '',
   assigned_to: '',
   due_date: '',
-  status: 'Backlog',
+  status: 'Todo',
   priority: 'Low',
   custom_task_type: '',
   reference_doctype: props.doctype,

@@ -21,7 +21,7 @@
       class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tablist']]:px-5 [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
     >
       <template #tab-panel="{ tab }">
-        <div v-if="tab.label === 'Data'" class="h-full flex flex-col px-3 sm:px-10">
+        <div v-if="tab.label === 'Contact Information'" class="h-full flex flex-col px-3 sm:px-10">
           <DataFields
             :doctype="'Contact'"
             :docname="contact.doc.name"
@@ -130,6 +130,26 @@
             doctype="Contact"
             :doc="contact.doc.name"
           />
+        </div>
+        <div v-if="tab.label === 'Call Logs'" class="flex flex-1 flex-col overflow-hidden">
+          <div v-if="callLogs.data?.length" class="activity mt-4">
+            <div v-for="(call, i) in callLogs.data" :key="call.name">
+              <div class="activity grid grid-cols-[30px_minmax(auto,_1fr)] gap-4 px-3 sm:px-10">
+                <div
+                  class="z-0 relative flex justify-center before:absolute before:left-[50%] before:-z-[1] before:top-0 before:border-l before:border-outline-gray-modals"
+                  :class="i != callLogs.data.length - 1 ? 'before:h-full' : 'before:h-4'"
+                >
+                  <div class="flex h-8 w-7 items-center justify-center bg-surface-white text-ink-gray-8">
+                    <MissedCallIcon v-if="call.status == 'No Answer'" class="text-ink-red-4" />
+                    <DeclinedCallIcon v-else-if="call.status == 'Busy'" />
+                    <component :is="call.type == 'Incoming' ? InboundCallIcon : OutboundCallIcon" v-else />
+                  </div>
+                </div>
+                <CallArea class="mb-4" :activity="call" />
+              </div>
+            </div>
+          </div>
+          <EmptyState v-else :icon="PhoneIcon" name="Call Logs" />
         </div>
       </template>
     </Tabs>
@@ -278,6 +298,11 @@ import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
 import NoteArea from '@/components/Activities/NoteArea.vue'
 import NoteModal from '@/components/Modals/NoteModal.vue'
+import CallArea from '@/components/Activities/CallArea.vue'
+import MissedCallIcon from '@/components/Icons/MissedCallIcon.vue'
+import DeclinedCallIcon from '@/components/Icons/DeclinedCallIcon.vue'
+import InboundCallIcon from '@/components/Icons/InboundCallIcon.vue'
+import OutboundCallIcon from '@/components/Icons/OutboundCallIcon.vue'
 import DealsListView from '@/components/ListViews/DealsListView.vue'
 import DataFields from '@/components/Activities/DataFields.vue'
 import ListRows from '@/components/ListViews/ListRows.vue'
@@ -401,7 +426,7 @@ function changeContactImage(file) {
 const tabIndex = ref(0)
 const tabs = [
   {
-    label: 'Data',
+    label: 'Contact Information',
     icon: DetailsIcon,
   },
   {
@@ -418,6 +443,11 @@ const tabs = [
     label: 'Notes',
     icon: NoteIcon,
     count: computed(() => notes.data?.length),
+  },
+  {
+    label: 'Call Logs',
+    icon: PhoneIcon,
+    count: computed(() => callLogs.data?.length),
   },
 ]
 
@@ -449,6 +479,13 @@ const notes = createResource({
   auto: true,
 })
 
+const callLogs = createResource({
+  url: 'kiwi.api.contact.get_linked_call_logs',
+  cache: ['contact_call_logs', props.contactId],
+  params: { contact: props.contactId },
+  auto: true,
+})
+
 const rows = computed(() => {
   if (!deals.data || deals.data == []) return []
 
@@ -473,7 +510,7 @@ const parsedSections = computed(() => {
         field.placeholder =
           fieldPlaceholderMap[field.fieldname] || field.placeholder
 
-        if (field.fieldname === 'email_id') {
+        if (field.fieldname === 'email_id' && !section.read_only) {
           return {
             ...field,
             read_only: false,
@@ -514,7 +551,7 @@ const parsedSections = computed(() => {
             },
           }
         }
-        if (field.fieldname === 'mobile_no') {
+        if (field.fieldname === 'mobile_no' && !section.read_only) {
           return {
             ...field,
             read_only: false,

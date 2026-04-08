@@ -204,6 +204,11 @@ const links = [
     to: 'Dashboard',
   },
   {
+    label: 'Contacts',
+    icon: ContactsIcon,
+    to: 'Contacts',
+  },
+  {
     label: 'Leads',
     icon: LeadsIcon,
     to: 'Leads',
@@ -213,26 +218,21 @@ const links = [
   //   icon: DealsIcon,
   //   to: 'Deals',
   // },
+  ticketNavLink,
   {
-    label: 'Contacts',
-    icon: ContactsIcon,
-    to: 'Contacts',
+    label: 'Tasks',
+    icon: TaskIcon,
+    to: 'Tasks',
   },
   {
     label: 'Organizations',
     icon: OrganizationsIcon,
     to: 'Organizations',
   },
-  ticketNavLink,
   {
     label: 'Notes',
     icon: NoteIcon,
     to: 'Notes',
-  },
-  {
-    label: 'Tasks',
-    icon: TaskIcon,
-    to: 'Tasks',
   },
   {
     label: 'Call Logs',

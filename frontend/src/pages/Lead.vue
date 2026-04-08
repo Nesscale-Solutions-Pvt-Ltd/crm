@@ -34,11 +34,12 @@
           </Button>
         </template>
       </Dropdown>
-      <Button
+      <!-- Convert to Deal button hidden per Kiwi customization -->
+      <!-- <Button
         :label="__('Convert to Deal')"
         variant="solid"
         @click="showConvertToDealModal = true"
-      />
+      /> -->
     </template>
   </LayoutHeader>
   <div v-if="doc.name" class="flex h-full overflow-hidden">
@@ -47,8 +48,41 @@
       :tabs="tabs"
       class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tablist']]:px-5 [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
     >
-      <template #tab-panel>
+      <template #tab-panel="{ tab }">
+        <div v-if="tab.name === 'Tickets'" class="flex flex-1 flex-col overflow-hidden">
+          <ListView
+            v-if="ticketRows.length"
+            class="mt-4"
+            :columns="ticketColumns"
+            :rows="ticketRows"
+            :options="{
+              getRowRoute: (row) => ({
+                name: 'Ticket',
+                params: { ticketId: row.name },
+              }),
+              selectable: false,
+              showTooltip: false,
+            }"
+            row-key="name"
+          >
+            <ListRows v-slot="{ idx, column, item, row }" :rows="ticketRows" doctype="HD Ticket">
+              <ListRowItem :item="item" :align="column.align">
+                <template #default="{ label }">
+                  <Badge
+                    v-if="column.key === 'status' || column.key === 'priority'"
+                    variant="subtle"
+                    :theme="column.key === 'priority' ? getPriorityColor(label) : 'gray'"
+                    size="md"
+                    :label="label"
+                  />
+                </template>
+              </ListRowItem>
+            </ListRows>
+          </ListView>
+          <EmptyState v-else :icon="TicketsIcon" name="Tickets" />
+        </div>
         <Activities
+          v-else
           ref="activities"
           v-model:reload="reload"
           v-model:tabIndex="tabIndex"
@@ -250,6 +284,9 @@ import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import LinkIcon from '@/components/Icons/LinkIcon.vue'
 import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
+import TicketsIcon from '@/components/Icons/TicketsIcon.vue'
+import ListRows from '@/components/ListViews/ListRows.vue'
+import EmptyState from '@/components/ListViews/EmptyState.vue'
 import LostReasonModal from '@/components/Modals/LostReasonModal.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import Activities from '@/components/Activities/Activities.vue'
@@ -265,6 +302,8 @@ import {
   copyToClipboard,
   validateIsImageFile,
   isTranslatable,
+  formatDate,
+  timeAgo,
 } from '@/utils'
 import { getView } from '@/utils/view'
 import { getSettings } from '@/stores/settings'
@@ -284,6 +323,9 @@ import {
   call,
   usePageMeta,
   toast,
+  Badge,
+  ListView,
+  ListRowItem,
 } from 'frappe-ui'
 import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -396,6 +438,11 @@ usePageMeta(() => {
 const tabs = computed(() => {
   let tabOptions = [
     {
+      name: 'Data',
+      label: __('Lead Details'),
+      icon: DetailsIcon,
+    },
+    {
       name: 'Activity',
       label: __('Activity'),
       icon: ActivityIcon,
@@ -411,11 +458,6 @@ const tabs = computed(() => {
       icon: CommentIcon,
     },
     {
-      name: 'Data',
-      label: __('Data'),
-      icon: DetailsIcon,
-    },
-    {
       name: 'Calls',
       label: __('Calls'),
       icon: PhoneIcon,
@@ -429,6 +471,12 @@ const tabs = computed(() => {
       name: 'Notes',
       label: __('Notes'),
       icon: NoteIcon,
+    },
+    {
+      name: 'Tickets',
+      label: __('Tickets'),
+      icon: TicketsIcon,
+      count: computed(() => leadTickets.data?.length),
     },
     {
       name: 'Attachments',
@@ -453,6 +501,40 @@ const sections = createResource({
   params: { doctype: 'CRM Lead' },
   auto: true,
 })
+
+const leadTickets = createResource({
+  url: 'kiwi.api.lead.get_linked_tickets',
+  cache: ['lead_tickets', props.leadId],
+  params: { lead: props.leadId },
+  auto: true,
+})
+
+const ticketRows = computed(() => {
+  if (!leadTickets.data) return []
+  return leadTickets.data.map((ticket) => ({
+    name: ticket.name,
+    subject: ticket.subject,
+    status: { label: ticket.status },
+    priority: { label: ticket.priority },
+    modified: {
+      label: formatDate(ticket.modified),
+      timeAgo: __(timeAgo(ticket.modified)),
+    },
+  }))
+})
+
+const ticketColumns = [
+  { label: __('ID'), key: 'name', width: '8rem' },
+  { label: __('Subject'), key: 'subject', width: '16rem' },
+  { label: __('Status'), key: 'status', width: '9rem' },
+  { label: __('Priority'), key: 'priority', width: '9rem' },
+  { label: __('Last Modified'), key: 'modified', width: '8rem' },
+]
+
+function getPriorityColor(priority) {
+  const map = { Urgent: 'red', High: 'orange', Medium: 'blue', Low: 'gray' }
+  return map[priority] || 'gray'
+}
 
 async function triggerStatusChange(value) {
   await triggerOnChange('status', value)

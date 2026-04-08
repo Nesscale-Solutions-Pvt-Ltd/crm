@@ -42,8 +42,29 @@
       :tabs="tabs"
       class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tablist']]:px-5 [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
     >
-      <template #tab-panel>
+      <template #tab-panel="{ tab }">
+        <div v-if="tab.name === 'Call Logs'" class="flex flex-1 flex-col overflow-hidden">
+          <div v-if="callLogs.data?.length" class="activity mt-4">
+            <div v-for="(call, i) in callLogs.data" :key="call.name">
+              <div class="activity grid grid-cols-[30px_minmax(auto,_1fr)] gap-4 px-3 sm:px-10">
+                <div
+                  class="z-0 relative flex justify-center before:absolute before:left-[50%] before:-z-[1] before:top-0 before:border-l before:border-outline-gray-modals"
+                  :class="i != callLogs.data.length - 1 ? 'before:h-full' : 'before:h-4'"
+                >
+                  <div class="flex h-8 w-7 items-center justify-center bg-surface-white text-ink-gray-8">
+                    <MissedCallIcon v-if="call.status == 'No Answer'" class="text-ink-red-4" />
+                    <DeclinedCallIcon v-else-if="call.status == 'Busy'" />
+                    <component :is="call.type == 'Incoming' ? InboundCallIcon : OutboundCallIcon" v-else />
+                  </div>
+                </div>
+                <CallArea class="mb-4" :activity="call" />
+              </div>
+            </div>
+          </div>
+          <EmptyState v-else :icon="PhoneIcon" name="Call Logs" />
+        </div>
         <Activities
+          v-else
           ref="activities"
           v-model:reload="reload"
           v-model:tabIndex="tabIndex"
@@ -156,6 +177,12 @@ import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
+import CallArea from '@/components/Activities/CallArea.vue'
+import MissedCallIcon from '@/components/Icons/MissedCallIcon.vue'
+import DeclinedCallIcon from '@/components/Icons/DeclinedCallIcon.vue'
+import InboundCallIcon from '@/components/Icons/InboundCallIcon.vue'
+import OutboundCallIcon from '@/components/Icons/OutboundCallIcon.vue'
+import EmptyState from '@/components/ListViews/EmptyState.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import Activities from '@/components/Activities/Activities.vue'
 import AssignTo from '@/components/AssignTo.vue'
@@ -294,6 +321,11 @@ usePageMeta(() => {
 const tabs = computed(() => {
   let tabOptions = [
     {
+      name: 'Data',
+      label: __('Ticket Details'),
+      icon: DetailsIcon,
+    },
+    {
       name: 'Activity',
       label: __('Activity'),
       icon: ActivityIcon,
@@ -309,9 +341,10 @@ const tabs = computed(() => {
       icon: CommentIcon,
     },
     {
-      name: 'Data',
-      label: __('Data'),
-      icon: DetailsIcon,
+      name: 'Call Logs',
+      label: __('Call Logs'),
+      icon: PhoneIcon,
+      count: computed(() => callLogs.data?.length),
     },
     {
       name: 'Attachments',
@@ -334,6 +367,13 @@ const sections = createResource({
   url: 'crm.fcrm.doctype.crm_fields_layout.crm_fields_layout.get_sidepanel_sections',
   cache: ['sidePanelSections', 'HD Ticket'],
   params: { doctype: 'HD Ticket' },
+  auto: true,
+})
+
+const callLogs = createResource({
+  url: 'kiwi.api.ticket.get_linked_call_logs',
+  cache: ['ticket_call_logs', props.ticketId],
+  params: { ticket: props.ticketId },
   auto: true,
 })
 

@@ -200,7 +200,7 @@ const task = ref({
   description: '',
   assigned_to: '',
   due_date: '',
-  status: 'Backlog',
+  status: 'Todo',
   priority: 'Low',
 })
 
@@ -342,7 +342,7 @@ function addEditTask() {
       description: '',
       assigned_to: '',
       due_date: '',
-      status: 'Backlog',
+      status: 'Todo',
       priority: 'Low',
     }
   }
