@@ -85,6 +85,17 @@
         :onCreate="field.create"
         @change="(v) => fieldChange(v, field)"
       />
+      <ArrowUpRightIcon
+        v-if="
+          data[field.fieldname] &&
+          linkRouteMap[field.fieldtype == 'Link' ? field.options : data[field.options]]
+        "
+        class="h-4 w-4 shrink-0 cursor-pointer text-ink-gray-5 hover:text-ink-gray-8"
+        @click.stop="navigateToLink(
+          field.fieldtype == 'Link' ? field.options : data[field.options],
+          data[field.fieldname]
+        )"
+      />
       <Button
         v-if="data[field.fieldname] && field.edit"
         class="shrink-0"
@@ -222,6 +233,7 @@
 import Password from '@/components/Controls/Password.vue'
 import FormattedInput from '@/components/Controls/FormattedInput.vue'
 import EditIcon from '@/components/Icons/EditIcon.vue'
+import ArrowUpRightIcon from '@/components/Icons/ArrowUpRightIcon.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import TableMultiselectInput from '@/components/Controls/TableMultiselectInput.vue'
@@ -234,7 +246,25 @@ import { getMeta } from '@/stores/meta'
 import { usersStore } from '@/stores/users'
 import { useDocument } from '@/data/document'
 import { Combobox, Tooltip, DatePicker, DateTimePicker } from 'frappe-ui'
+import { useRouter } from 'vue-router'
 import { computed, provide, inject } from 'vue'
+
+const router = useRouter()
+
+const linkRouteMap = {
+  'Contact': { name: 'Contact', param: 'contactId' },
+  'CRM Lead': { name: 'Lead', param: 'leadId' },
+  'CRM Deal': { name: 'Deal', param: 'dealId' },
+  'CRM Organization': { name: 'Organization', param: 'organizationId' },
+  'HD Ticket': { name: 'Ticket', param: 'ticketId' },
+}
+
+function navigateToLink(doctype, value) {
+  const route = linkRouteMap[doctype]
+  if (route && value) {
+    router.push({ name: route.name, params: { [route.param]: value } })
+  }
+}
 
 const props = defineProps({
   field: { type: Object, required: true },
@@ -308,7 +338,7 @@ const field = computed(() => {
 
   let _field = {
     ...field,
-    filters: field.link_filters && JSON.parse(field.link_filters),
+    filters: field.link_filters && resolveFilters(JSON.parse(field.link_filters), data.value),
     placeholder: field.placeholder || field.label,
     display_via_depends_on: evaluateDependsOnValue(
       field.depends_on,
@@ -326,6 +356,20 @@ const field = computed(() => {
   _field.visible = isFieldVisible(_field)
   return _field
 })
+
+function resolveFilters(filters, docData) {
+  if (!filters || !docData) return filters
+  let resolved = {}
+  for (let key in filters) {
+    let value = filters[key]
+    if (typeof value === 'string' && value in docData) {
+      resolved[key] = docData[value]
+    } else {
+      resolved[key] = value
+    }
+  }
+  return resolved
+}
 
 function isFieldVisible(field) {
   if (preview.value) return true

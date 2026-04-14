@@ -1,8 +1,9 @@
 <template>
-  <div v-if="iframeEnabled" class="ozonetel-toolbar-wrapper">
+  <div v-if="isOzonetelAgent" class="ozonetel-toolbar-wrapper">
     <!-- Toggle button -->
     <button
       class="ozonetel-toggle-btn"
+      :class="{ 'ozonetel-toggle-btn-active': isPanelOpen }"
       :title="isPanelOpen ? __('Hide Ozonetel Toolbar') : __('Show Ozonetel Toolbar')"
       @click="isPanelOpen = !isPanelOpen"
     >
@@ -64,7 +65,7 @@
         id="cloudagent_iframe"
         sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-modals allow-downloads"
         allow="geolocation; microphone; display-capture"
-        :src="iframeUrl"
+        src="https://agent.cloudagent.ozonetel.com/login"
         width="350"
         height="560"
         class="ozonetel-iframe"
@@ -74,22 +75,10 @@
 </template>
 
 <script setup>
-import { createResource } from 'frappe-ui'
 import { ref } from 'vue'
+import { isOzonetelAgent } from '@/composables/settings'
 
-const iframeEnabled = ref(false)
-const iframeUrl = ref('')
 const isPanelOpen = ref(false)
-
-createResource({
-  url: 'ozonetel_integration.api.agent.get_iframe_config',
-  cache: 'Ozonetel Iframe Config',
-  auto: true,
-  onSuccess: (data) => {
-    iframeEnabled.value = Boolean(data?.enabled)
-    iframeUrl.value = data?.iframe_url || ''
-  },
-})
 </script>
 
 <style scoped>

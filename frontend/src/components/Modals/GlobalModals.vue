@@ -21,6 +21,11 @@
     v-model="showChangePasswordModal"
   />
   <AboutModal v-model="showAboutModal" />
+  <LeadModal
+    v-if="showLeadModal"
+    v-model="showLeadModal"
+    :defaults="leadModalDefaults"
+  />
 </template>
 <script setup>
 import ChangePasswordModal from '@/components/Modals/ChangePasswordModal.vue'
@@ -28,6 +33,7 @@ import CreateDocumentModal from '@/components/Modals/CreateDocumentModal.vue'
 import QuickEntryModal from '@/components/Modals/QuickEntryModal.vue'
 import AddressModal from '@/components/Modals/AddressModal.vue'
 import AboutModal from '@/components/Modals/AboutModal.vue'
+import LeadModal from '@/components/Modals/LeadModal.vue'
 import {
   showCreateDocumentModal,
   createDocumentDoctype,
@@ -41,5 +47,7 @@ import {
   addressProps,
   showAboutModal,
   showChangePasswordModal,
+  showLeadModal,
+  leadModalDefaults,
 } from '@/composables/modals'
 </script>

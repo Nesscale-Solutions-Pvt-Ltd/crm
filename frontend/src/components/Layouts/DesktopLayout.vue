@@ -8,10 +8,12 @@
       <slot />
     </div>
     <GlobalModals />
+    <OzonetelToolbar />
   </div>
 </template>
 <script setup>
 import AppSidebar from '@/components/Layouts/AppSidebar.vue'
 import AppHeader from '@/components/Layouts/AppHeader.vue'
 import GlobalModals from '@/components/Modals/GlobalModals.vue'
+import OzonetelToolbar from '@/components/Telephony/OzonetelToolbar.vue'
 </script>

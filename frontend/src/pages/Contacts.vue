@@ -78,6 +78,7 @@ const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
 const { getOrganization } = organizationsStore()
 
 const showContactModal = ref(false)
+const contactModalDefaults = ref({})
 
 const contactsListView = ref(null)
 

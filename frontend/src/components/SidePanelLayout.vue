@@ -274,11 +274,15 @@
                         <ArrowUpRightIcon
                           v-if="
                             field.fieldtype === 'Link' &&
-                            field.link &&
-                            doc[field.fieldname]
+                            doc[field.fieldname] &&
+                            (field.link || linkRouteMap[field.options])
                           "
                           class="h-4 w-4 shrink-0 cursor-pointer text-ink-gray-5 hover:text-ink-gray-8"
-                          @click.stop="field.link(doc[field.fieldname])"
+                          @click.stop="
+                            field.link
+                              ? field.link(doc[field.fieldname])
+                              : navigateToLink(field.options, doc[field.fieldname])
+                          "
                         />
                         <EditIcon
                           v-if="
@@ -326,7 +330,25 @@ import { getFormat, evaluateDependsOnValue } from '@/utils'
 import { flt } from '@/utils/numberFormat.js'
 import { Tooltip, DateTimePicker, DatePicker } from 'frappe-ui'
 import { useDocument } from '@/data/document'
+import { useRouter } from 'vue-router'
 import { ref, computed, getCurrentInstance } from 'vue'
+
+const router = useRouter()
+
+const linkRouteMap = {
+  'Contact': { name: 'Contact', param: 'contactId' },
+  'CRM Lead': { name: 'Lead', param: 'leadId' },
+  'CRM Deal': { name: 'Deal', param: 'dealId' },
+  'CRM Organization': { name: 'Organization', param: 'organizationId' },
+  'HD Ticket': { name: 'Ticket', param: 'ticketId' },
+}
+
+function navigateToLink(doctype, value) {
+  const route = linkRouteMap[doctype]
+  if (route && value) {
+    router.push({ name: route.name, params: { [route.param]: value } })
+  }
+}
 
 const props = defineProps({
   sections: { type: Object, default: () => ({}) },

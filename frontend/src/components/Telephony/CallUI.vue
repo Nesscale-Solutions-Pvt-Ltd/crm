@@ -1,6 +1,7 @@
 <template>
   <TwilioCallUI ref="twilio" />
   <ExotelCallUI ref="exotel" />
+  <OzonetelCallPopup />
   <Dialog
     v-model="show"
     :options="{
@@ -25,7 +26,7 @@
           v-model="callMedium"
           type="select"
           :label="__('Calling Medium')"
-          :options="['Twilio', 'Exotel']"
+          :options="availableMediums"
         />
         <div class="flex flex-col gap-1">
           <FormControl
@@ -47,14 +48,16 @@
 <script setup>
 import TwilioCallUI from '@/components/Telephony/TwilioCallUI.vue'
 import ExotelCallUI from '@/components/Telephony/ExotelCallUI.vue'
+import OzonetelCallPopup from '@/components/Telephony/OzonetelCallPopup.vue'
 import {
   twilioEnabled,
   exotelEnabled,
+  ozonetelEnabled,
   defaultCallingMedium,
 } from '@/composables/settings'
 import { globalStore } from '@/stores/global'
-import { FormControl, call, toast } from 'frappe-ui'
-import { nextTick, ref, watch } from 'vue'
+import { FormControl, call, createResource, toast } from 'frappe-ui'
+import { computed, nextTick, ref, watch } from 'vue'
 
 const { setMakeCall } = globalStore()
 
@@ -67,18 +70,34 @@ const isDefaultMedium = ref(false)
 const show = ref(false)
 const mobileNumber = ref('')
 
+const availableMediums = computed(() => {
+  const mediums = []
+  if (twilioEnabled.value) mediums.push('Twilio')
+  if (exotelEnabled.value) mediums.push('Exotel')
+  if (ozonetelEnabled.value) mediums.push('Ozonetel')
+  return mediums
+})
+
+const enabledCount = computed(() => {
+  let count = 0
+  if (twilioEnabled.value) count++
+  if (exotelEnabled.value) count++
+  if (ozonetelEnabled.value) count++
+  return count
+})
+
 function makeCall(number) {
-  if (
-    twilioEnabled.value &&
-    exotelEnabled.value &&
-    !defaultCallingMedium.value
-  ) {
+  if (enabledCount.value > 1 && !defaultCallingMedium.value) {
     mobileNumber.value = number
     show.value = true
     return
   }
 
-  callMedium.value = twilioEnabled.value ? 'Twilio' : 'Exotel'
+  // Auto-select the single enabled medium
+  if (twilioEnabled.value) callMedium.value = 'Twilio'
+  else if (exotelEnabled.value) callMedium.value = 'Exotel'
+  else if (ozonetelEnabled.value) callMedium.value = 'Ozonetel'
+
   if (defaultCallingMedium.value) {
     callMedium.value = defaultCallingMedium.value
   }
@@ -99,7 +118,26 @@ function makeCallUsing() {
   if (callMedium.value === 'Exotel') {
     exotel.value.makeOutgoingCall(mobileNumber.value)
   }
+
+  if (callMedium.value === 'Ozonetel') {
+    makeOzonetelCall(mobileNumber.value)
+  }
+
   show.value = false
+}
+
+function makeOzonetelCall(number) {
+  createResource({
+    url: 'ozonetel_integration.api.agent.make_a_call',
+    params: { to_number: number },
+    auto: true,
+    onSuccess(data) {
+      toast.success(data.message || __('Call initiated'))
+    },
+    onError(err) {
+      toast.error(err.messages?.[0] || __('Failed to initiate call'))
+    },
+  })
 }
 
 async function setDefaultCallingMedium() {
@@ -114,8 +152,8 @@ async function setDefaultCallingMedium() {
 }
 
 watch(
-  [twilioEnabled, exotelEnabled],
-  ([twilioValue, exotelValue]) =>
+  [twilioEnabled, exotelEnabled, ozonetelEnabled],
+  ([twilioValue, exotelValue, ozonetelValue]) =>
     nextTick(() => {
       if (twilioValue) {
         twilio.value.setup()
@@ -127,8 +165,11 @@ watch(
         callMedium.value = 'Exotel'
       }
 
-      if (twilioValue || exotelValue) {
-        callMedium.value = 'Twilio'
+      if (ozonetelValue) {
+        callMedium.value = 'Ozonetel'
+      }
+
+      if (twilioValue || exotelValue || ozonetelValue) {
         setMakeCall(makeCall)
       }
     }),
