@@ -8,6 +8,20 @@
       </Breadcrumbs>
     </template>
     <template v-if="!errorTitle" #right-header>
+      <Badge
+        v-if="isNewLead"
+        variant="subtle"
+        theme="blue"
+        size="md"
+        :label="__('New')"
+      />
+      <Badge
+        v-if="isRepeatLead.data"
+        variant="subtle"
+        theme="orange"
+        size="md"
+        :label="__('Repeat Lead')"
+      />
       <CustomActions
         v-if="document._actions?.length"
         :actions="document._actions"
@@ -18,18 +32,17 @@
       />
       <AssignTo v-model="assignees.data" doctype="CRM Lead" :docname="leadId" />
       <Dropdown
-        v-if="doc && document.statuses"
-        :options="statuses"
+        v-if="doc"
+        :options="customLeadStatusOptions"
         placement="right"
       >
         <template #default="{ open }">
           <Button
-            v-if="doc.status"
-            :label="statusLabel(doc.status)"
+            :label="doc.custom_lead_status || __('Set Status')"
             :iconRight="open ? 'chevron-up' : 'chevron-down'"
           >
             <template #prefix>
-              <IndicatorIcon :class="getLeadStatus(doc.status).color" />
+              <IndicatorIcon :class="customLeadStatusColor(doc.custom_lead_status)" />
             </template>
           </Button>
         </template>
@@ -327,7 +340,7 @@ import {
   ListView,
   ListRowItem,
 } from 'frappe-ui'
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, h } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useActiveTabManager } from '@/composables/useActiveTabManager'
 
@@ -439,8 +452,18 @@ const tabs = computed(() => {
   let tabOptions = [
     {
       name: 'Data',
-      label: __('Lead Details'),
+      label: __('Lead Information'),
       icon: DetailsIcon,
+    },
+    {
+      name: 'Notes',
+      label: __('Notes'),
+      icon: NoteIcon,
+    },
+    {
+      name: 'Tasks',
+      label: __('Tasks'),
+      icon: TaskIcon,
     },
     {
       name: 'Activity',
@@ -461,16 +484,6 @@ const tabs = computed(() => {
       name: 'Calls',
       label: __('Calls'),
       icon: PhoneIcon,
-    },
-    {
-      name: 'Tasks',
-      label: __('Tasks'),
-      icon: TaskIcon,
-    },
-    {
-      name: 'Notes',
-      label: __('Notes'),
-      icon: NoteIcon,
     },
     {
       name: 'Tickets',
@@ -509,6 +522,28 @@ const leadTickets = createResource({
   auto: true,
 })
 
+const leadCallCount = createResource({
+  url: 'frappe.client.get_count',
+  params: {
+    doctype: 'CRM Call Log',
+    filters: {
+      reference_doctype: 'CRM Lead',
+      reference_docname: props.leadId,
+    },
+  },
+  auto: true,
+})
+
+const isNewLead = computed(
+  () => leadCallCount.data === 0 || leadCallCount.data === '0',
+)
+
+const isRepeatLead = createResource({
+  url: 'kiwi.api.lead.is_repeat_lead',
+  params: { lead_id: props.leadId },
+  auto: true,
+})
+
 const ticketRows = computed(() => {
   if (!leadTickets.data) return []
   return leadTickets.data.map((ticket) => ({
@@ -540,6 +575,25 @@ async function triggerStatusChange(value) {
   await triggerOnChange('status', value)
   setLostReason()
 }
+
+const CUSTOM_LEAD_STATUS_COLORS = {
+  Active: 'text-ink-blue-3',
+  Converted: 'text-ink-green-3',
+  Dead: 'text-ink-red-3',
+}
+
+function customLeadStatusColor(value) {
+  return CUSTOM_LEAD_STATUS_COLORS[value] || 'text-ink-gray-5'
+}
+
+const customLeadStatusOptions = computed(() =>
+  ['Active', 'Converted', 'Dead'].map((value) => ({
+    label: __(value),
+    icon: () =>
+      h(IndicatorIcon, { class: customLeadStatusColor(value) }),
+    onClick: () => updateField('custom_lead_status', value),
+  })),
+)
 
 function updateField(name, value) {
   value = Array.isArray(name) ? '' : value

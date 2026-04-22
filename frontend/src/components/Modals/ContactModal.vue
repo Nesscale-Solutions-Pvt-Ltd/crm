@@ -131,7 +131,7 @@ const insertContact = createResource({
     handleContactUpdate(doc)
   },
   onError: (err) => {
-    error.value = err.error?.messages?.[0]
+    error.value = err.messages?.[0] || err.message
   },
 })
 

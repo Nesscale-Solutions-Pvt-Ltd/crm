@@ -118,9 +118,7 @@ async function create() {
     {
       onError: (err) => {
         loading.value = false
-        if (err.error) {
-          error.value = err.error.messages?.[0]
-        }
+        error.value = err.messages?.[0] || err.message
       },
     },
   )

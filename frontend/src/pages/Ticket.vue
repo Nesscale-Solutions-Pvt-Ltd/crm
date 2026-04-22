@@ -103,6 +103,18 @@
               "
             />
             <Button
+              v-if="callEnabled"
+              :tooltip="__('Make a Call')"
+              :icon="PhoneIcon"
+              @click="
+                doc.custom_phone_number
+                  ? makeTicketCall(doc.custom_phone_number)
+                  : toast.error(
+                      __('Please set a phone number to make calls'),
+                    )
+              "
+            />
+            <Button
               :tooltip="__('Attach a File')"
               :icon="AttachmentIcon"
               @click="showFilesUploader = true"
@@ -200,7 +212,7 @@ import { globalStore } from '@/stores/global'
 import { ticketStatusesStore } from '@/stores/ticketStatuses'
 import { getMeta } from '@/stores/meta'
 import { useDocument } from '@/data/document'
-import { whatsappEnabled } from '@/composables/settings'
+import { whatsappEnabled, callEnabled } from '@/composables/settings'
 import {
   createResource,
   Dropdown,
@@ -425,5 +437,25 @@ function reloadAssignees(data) {
   if (Object.hasOwn(data ?? {}, 'ticket_owner')) {
     assignees.reload()
   }
+}
+
+const ticketCall = createResource({
+  url: 'kiwi.api.ticket.make_call',
+  makeParams: ({ to_number }) => ({
+    ticket: props.ticketId,
+    to_number,
+  }),
+  onSuccess(res) {
+    const message = res?.data?.message || __('Call initiated')
+    toast.success(message)
+    setTimeout(() => callLogs.reload(), 1500)
+  },
+  onError(err) {
+    toast.error(err.messages?.[0] || __('Failed to initiate call'))
+  },
+})
+
+function makeTicketCall(number) {
+  ticketCall.submit({ to_number: number })
 }
 </script>

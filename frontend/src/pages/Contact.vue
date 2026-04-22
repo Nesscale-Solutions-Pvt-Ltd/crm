@@ -236,6 +236,11 @@
                   @click="showFilesUploader = true"
                 />
                 <Button
+                  :tooltip="__('Create Ticket')"
+                  :icon="TicketsIcon"
+                  @click="openCreateTicketModal"
+                />
+                <Button
                   v-if="canDelete"
                   :tooltip="__('Delete')"
                   variant="subtle"
@@ -279,6 +284,11 @@
     :docname="contact.doc.name"
     name="Contacts"
   />
+  <TicketModal
+    v-if="showTicketModal"
+    v-model="showTicketModal"
+    :defaults="ticketDefaults"
+  />
 </template>
 
 <script setup>
@@ -298,6 +308,7 @@ import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
 import NoteArea from '@/components/Activities/NoteArea.vue'
 import NoteModal from '@/components/Modals/NoteModal.vue'
+import TicketModal from '@/components/Modals/TicketModal.vue'
 import CallArea from '@/components/Activities/CallArea.vue'
 import MissedCallIcon from '@/components/Icons/MissedCallIcon.vue'
 import DeclinedCallIcon from '@/components/Icons/DeclinedCallIcon.vue'
@@ -409,6 +420,18 @@ const showDeleteLinkedDocModal = ref(false)
 const showFilesUploader = ref(false)
 const showNoteModal = ref(false)
 const editingNote = ref({})
+const showTicketModal = ref(false)
+const ticketDefaults = ref({})
+
+function openCreateTicketModal() {
+  ticketDefaults.value = {
+    contact: contact.doc.name,
+    custom_contact_name: contact.doc.full_name,
+    custom_phone_number: contact.doc.mobile_no || '',
+    raised_by: contact.doc.email_id || '',
+  }
+  showTicketModal.value = true
+}
 
 async function deleteContact() {
   showDeleteLinkedDocModal.value = true
