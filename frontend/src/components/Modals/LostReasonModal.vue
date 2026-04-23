@@ -61,6 +61,7 @@ import { ref } from 'vue'
 const props = defineProps({
   doctype: { type: String, default: 'CRM Lead' },
   document: { type: Object, required: true },
+  statusField: { type: String, default: 'status' },
 })
 
 const show = defineModel({ type: Boolean })
@@ -76,7 +77,7 @@ function cancel() {
   error.value = ''
   lostReason.value = ''
   lostNotes.value = ''
-  doc.status = props.document.originalDoc.status
+  doc[props.statusField] = props.document.originalDoc[props.statusField]
 }
 
 function save() {

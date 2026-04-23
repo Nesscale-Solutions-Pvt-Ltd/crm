@@ -482,14 +482,14 @@ const deals = createResource({
 })
 
 const leads = createResource({
-  url: 'crm.api.contact.get_linked_leads',
+  url: 'kiwi.api.contact.get_linked_leads',
   cache: ['leads', props.contactId],
   params: { contact: props.contactId },
   auto: true,
 })
 
 const tickets = createResource({
-  url: 'crm.api.contact.get_linked_tickets',
+  url: 'kiwi.api.contact.get_linked_tickets',
   cache: ['tickets', props.contactId],
   params: { contact: props.contactId },
   auto: true,

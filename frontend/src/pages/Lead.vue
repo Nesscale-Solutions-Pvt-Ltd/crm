@@ -277,6 +277,7 @@
     v-model="showLostReasonModal"
     doctype="CRM Lead"
     :document="document"
+    :status-field="lostReasonStatusField"
   />
 </template>
 <script setup>
@@ -591,9 +592,21 @@ const customLeadStatusOptions = computed(() =>
     label: __(value),
     icon: () =>
       h(IndicatorIcon, { class: customLeadStatusColor(value) }),
-    onClick: () => updateField('custom_lead_status', value),
+    onClick: () => handleCustomLeadStatusSelect(value),
   })),
 )
+
+function handleCustomLeadStatusSelect(value) {
+  if (value === 'Dead' && !doc.value.lost_reason) {
+    // Stage the status change so the modal's cancel revert works,
+    // and require a Loss Reason before persisting.
+    doc.value.custom_lead_status = 'Dead'
+    lostReasonStatusField.value = 'custom_lead_status'
+    showLostReasonModal.value = true
+    return
+  }
+  updateField('custom_lead_status', value)
+}
 
 function updateField(name, value) {
   value = Array.isArray(name) ? '' : value
@@ -636,6 +649,7 @@ function statusLabel(status) {
 }
 
 const showLostReasonModal = ref(false)
+const lostReasonStatusField = ref('status')
 
 function setLostReason() {
   if (
@@ -647,10 +661,21 @@ function setLostReason() {
     return
   }
 
+  lostReasonStatusField.value = 'status'
   showLostReasonModal.value = true
 }
 
 function beforeStatusChange(data) {
+  if (
+    Object.hasOwn(data ?? {}, 'custom_lead_status') &&
+    data.custom_lead_status === 'Dead' &&
+    !document.doc.lost_reason
+  ) {
+    lostReasonStatusField.value = 'custom_lead_status'
+    showLostReasonModal.value = true
+    return
+  }
+
   if (
     Object.hasOwn(data ?? {}, 'status') &&
     getLeadStatus(data.status).type == 'Lost'
