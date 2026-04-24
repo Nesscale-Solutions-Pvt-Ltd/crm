@@ -162,29 +162,6 @@
             />
           </div>
           <div
-            v-else-if="column.key === 'lead_name' && label"
-            class="flex items-center gap-2 truncate text-base"
-            @click="
-              (event) =>
-                emit('applyFilter', {
-                  event,
-                  idx,
-                  column,
-                  item,
-                  firstColumn: columns[0],
-                })
-            "
-          >
-            <span class="truncate">{{ getLabel(label, column) }}</span>
-            <Badge
-              v-if="isNewLead(row.name)"
-              variant="subtle"
-              theme="blue"
-              size="sm"
-              :label="__('New')"
-            />
-          </div>
-          <div
             v-else-if="label"
             class="truncate text-base"
             @click="
@@ -236,7 +213,6 @@ import ListRows from '@/components/ListViews/ListRows.vue'
 import { isTranslatable } from '@/utils'
 import {
   Avatar,
-  Badge,
   ListView,
   ListHeader,
   ListHeaderItem,
@@ -245,7 +221,6 @@ import {
   ListFooter,
   Dropdown,
   Tooltip,
-  createResource,
 } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
 import { ref, computed, watch } from 'vue'
