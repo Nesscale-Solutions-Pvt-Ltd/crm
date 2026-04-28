@@ -131,10 +131,9 @@
           <ErrorMessage :message="__(error)" />
         </div>
       </div>
-      <SLASection
-        v-if="doc.sla_status"
+      <HDTicketSLASection
+        v-if="doc.agreement_status"
         v-model="doc"
-        @updateField="updateField"
       />
       <div
         v-if="sections.data"
@@ -200,7 +199,7 @@ import Activities from '@/components/Activities/Activities.vue'
 import AssignTo from '@/components/AssignTo.vue'
 import FilesUploader from '@/components/FilesUploader/FilesUploader.vue'
 import SidePanelLayout from '@/components/SidePanelLayout.vue'
-import SLASection from '@/components/SLASection.vue'
+import HDTicketSLASection from '@/components/HDTicketSLASection.vue'
 import CustomActions from '@/components/CustomActions.vue'
 import {
   setupCustomizations,

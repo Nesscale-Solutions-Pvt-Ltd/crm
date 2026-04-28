@@ -131,18 +131,9 @@ onMounted(() => {
 })
 
 function getRoute(notification) {
-  let params = {
-    leadId: notification.reference_name,
-  }
-  if (notification.route_name === 'Deal') {
-    params = {
-      dealId: notification.reference_name,
-    }
-  }
-
   return {
     name: notification.route_name,
-    params: params,
+    params: notification.route_params,
     hash: notification.hash,
   }
 }
