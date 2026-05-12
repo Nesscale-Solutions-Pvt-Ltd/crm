@@ -44,41 +44,121 @@
     <div v-show="isPanelOpen" class="ozonetel-panel">
       <div class="ozonetel-panel-header">
         <span class="ozonetel-panel-title">{{ __('Ozonetel Agent') }}</span>
-        <button class="ozonetel-panel-close" @click="isPanelOpen = false">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+        <div class="ozonetel-panel-actions">
+          <button
+            class="ozonetel-panel-icon-btn"
+            :title="__('Reload')"
+            :disabled="loginUrlResource.loading"
+            @click="reloadIframe"
           >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+          </button>
+          <button class="ozonetel-panel-icon-btn" :title="__('Close')" @click="isPanelOpen = false">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
       </div>
-      <iframe
-        id="cloudagent_iframe"
-        sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-modals allow-downloads"
-        allow="geolocation; microphone; display-capture"
-        src="https://agent.cloudagent.ozonetel.com/login"
-        width="350"
-        height="560"
-        class="ozonetel-iframe"
-      />
+
+      <div class="ozonetel-panel-body">
+        <div v-if="loginUrlResource.loading" class="ozonetel-status">
+          {{ __('Signing you into Ozonetel…') }}
+        </div>
+        <div v-else-if="errorMessage" class="ozonetel-status ozonetel-status-error">
+          <p>{{ errorMessage }}</p>
+          <button class="ozonetel-retry-btn" @click="loadLoginUrl">{{ __('Retry') }}</button>
+        </div>
+        <iframe
+          v-else-if="iframeUrl"
+          id="cloudagent_iframe"
+          ref="iframeRef"
+          :src="iframeUrl"
+          sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-modals allow-downloads"
+          allow="geolocation; microphone; display-capture"
+          width="350"
+          height="560"
+          class="ozonetel-iframe"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { createResource } from 'frappe-ui'
 import { isOzonetelAgent } from '@/composables/settings'
 
 const isPanelOpen = ref(false)
+const iframeRef = ref(null)
+
+const loginUrlResource = createResource({
+  url: 'ozonetel_integration.api.agent.get_ozonetel_login_url',
+  cache: 'ozonetel-login-url',
+  auto: false,
+})
+
+const iframeUrl = computed(() => loginUrlResource.data?.iframe_url || '')
+
+const errorMessage = computed(() => {
+  if (loginUrlResource.loading) return ''
+  const err = loginUrlResource.error
+  if (!err) return ''
+  return (
+    err?.exc_type ||
+    err?.messages?.[0] ||
+    err?.message ||
+    String(err) ||
+    __('Failed to load Ozonetel login URL.')
+  )
+})
+
+function loadLoginUrl() {
+  if (!isOzonetelAgent.value) return
+  loginUrlResource.reload()
+}
+
+function reloadIframe() {
+  // Force a fresh URL fetch (in case credentials/settings changed) and refresh iframe.
+  loadLoginUrl()
+}
+
+// Fetch URL once when the panel is first opened by an Ozonetel agent.
+watch(
+  [isPanelOpen, isOzonetelAgent],
+  ([open, agent]) => {
+    if (open && agent && !loginUrlResource.data && !loginUrlResource.loading) {
+      loadLoginUrl()
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>
@@ -148,6 +228,73 @@ const isPanelOpen = ref(false)
 }
 
 .ozonetel-panel-close:hover {
+  background: var(--hover-color, #edf2f7);
+}
+
+.ozonetel-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ozonetel-panel-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted, #718096);
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.ozonetel-panel-icon-btn:hover:not(:disabled) {
+  background: var(--hover-color, #edf2f7);
+}
+
+.ozonetel-panel-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ozonetel-panel-body {
+  width: 350px;
+  min-height: 560px;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  background: white;
+}
+
+.ozonetel-status {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-muted, #718096);
+  text-align: center;
+}
+
+.ozonetel-status-error {
+  color: var(--text-color, #1a202c);
+}
+
+.ozonetel-retry-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--surface-menu-bar, #f8fafc);
+  color: var(--text-color, #1a202c);
+  cursor: pointer;
+}
+
+.ozonetel-retry-btn:hover {
   background: var(--hover-color, #edf2f7);
 }
 

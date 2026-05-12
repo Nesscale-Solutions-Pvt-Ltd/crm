@@ -157,6 +157,9 @@ onMounted(() => {
   if (!ticket.doc?.ticket_owner) {
     ticket.doc.ticket_owner = getUser().name
   }
+  if (!ticket.doc?.primary_owner) {
+    ticket.doc.primary_owner = user
+  }
   if (!ticket.doc?.status && ticketStatuses.value[0]?.value) {
     ticket.doc.status = ticketStatuses.value[0].value
   }
