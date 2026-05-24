@@ -520,6 +520,14 @@ list.value = createResource({
     route.params.viewType,
     new URLSearchParams(document.cookie.split('; ').join('&')).get('user_id') || '',
   ],
+  onError(err) {
+    // Drop any previously-cached rows when the request fails (e.g. 403).
+    // Without this, frappe-ui keeps the stale data on screen even though
+    // the user no longer has permission to read the doctype.
+    if (list.value) {
+      list.value.data = null
+    }
+  },
   onSuccess(data) {
     let cv = getView(route.query.view, route.params.viewType, props.doctype)
     let params = list.value.params ? list.value.params : getParams()
