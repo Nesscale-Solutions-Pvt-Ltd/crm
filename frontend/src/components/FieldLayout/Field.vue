@@ -165,6 +165,17 @@
       input-class="border-none"
       @change="(v) => fieldChange(v, field)"
     />
+    <TextEditor
+      v-else-if="field.fieldtype === 'Text Editor'"
+      :editable="!Boolean(field.read_only)"
+      variant="outline"
+      :bubbleMenu="true"
+      editor-class="!prose-sm max-w-none break-words prose-table:table-fixed prose-td:break-words prose-th:break-words prose-img:max-w-full prose-pre:whitespace-pre-wrap prose-code:whitespace-pre-wrap prose-code:break-all overflow-x-auto min-h-[80px] max-h-96 overflow-y-auto rounded border border-[--surface-gray-2] bg-surface-gray-2 py-1.5 px-2 text-ink-gray-8"
+      :content="data[field.fieldname]"
+      :placeholder="getPlaceholder(field)"
+      @change="(val) => (editedTextEditorValue = val)"
+      @blur="() => persistTextEditor(field)"
+    />
     <FormControl
       v-else-if="
         ['Small Text', 'Text', 'Long Text', 'Code'].includes(field.fieldtype)
@@ -245,9 +256,9 @@ import { flt } from '@/utils/numberFormat.js'
 import { getMeta } from '@/stores/meta'
 import { usersStore } from '@/stores/users'
 import { useDocument } from '@/data/document'
-import { Combobox, Tooltip, DatePicker, DateTimePicker } from 'frappe-ui'
+import { Combobox, Tooltip, DatePicker, DateTimePicker, TextEditor } from 'frappe-ui'
 import { useRouter } from 'vue-router'
-import { computed, provide, inject } from 'vue'
+import { computed, provide, inject, ref } from 'vue'
 
 const router = useRouter()
 
@@ -409,6 +420,17 @@ const getOptions = (options) => {
   } else {
     return []
   }
+}
+
+// Text Editor fields persist on blur (not on every keystroke) to mirror the
+// save-on-change behaviour of the textarea fields above.
+const editedTextEditorValue = ref(undefined)
+function persistTextEditor(df) {
+  const value = editedTextEditorValue.value
+  if (value !== undefined && value !== data.value[df.fieldname]) {
+    fieldChange(value, df)
+  }
+  editedTextEditorValue.value = undefined
 }
 
 function fieldChange(value, df) {
