@@ -165,6 +165,14 @@ watch(
       let editor = newEmailEditor.value.editor
       editor.commands.focus()
       setSignature(editor)
+      // Auto-populate the "To" from the record's email when it's still empty.
+      // Mirrors Helpdesk, which seeds reply recipients from the ticket's
+      // raised_by. Done on open (not at mount) so the doc is already loaded,
+      // and only when empty so it won't override a per-email reply.
+      if (!newEmailEditor.value.toEmails?.length) {
+        const to = doc.value.email || doc.value.raised_by
+        if (to) newEmailEditor.value.toEmails = [to]
+      }
     }
   },
 )
