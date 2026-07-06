@@ -67,6 +67,7 @@
               'first_response_time',
               'first_responded_on',
               'response_by',
+              'resolution_by',
             ].includes(titleField)
           "
           class="truncate text-base"
@@ -118,6 +119,7 @@
               'first_response_time',
               'first_responded_on',
               'response_by',
+              'resolution_by',
             ].includes(fieldName)
           "
           class="truncate text-base"
@@ -427,11 +429,17 @@ function parseRows(rows, columns = []) {
           timeAgo: __(timeAgo(ticket[row])),
         }
       } else if (
-        ['first_response_time', 'first_responded_on', 'response_by'].includes(
-          row,
-        )
+        [
+          'first_response_time',
+          'first_responded_on',
+          'response_by',
+          'resolution_by',
+        ].includes(row)
       ) {
-        let field = row == 'response_by' ? 'response_by' : 'first_responded_on'
+        let field =
+          row == 'response_by' || row == 'resolution_by'
+            ? row
+            : 'first_responded_on'
         _rows[row] = {
           label: ticket[field] ? formatDate(ticket[field]) : '',
           timeAgo: ticket[row]

@@ -360,10 +360,11 @@ const rows = computed(() => {
 const columns = computed(() => {
   let _columns = leads.value?.data?.columns || []
 
-  // Set align right for last column
+  // Set align right for last column — but keep avatar/assignee columns
+  // (e.g. "Assigned To") left-aligned, since right-aligned avatars look off.
   if (_columns.length) {
     _columns = _columns.map((col, index) => {
-      if (index === _columns.length - 1) {
+      if (index === _columns.length - 1 && col.key !== '_assign') {
         return { ...col, align: 'right' }
       }
       return col

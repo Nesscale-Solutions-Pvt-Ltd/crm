@@ -85,6 +85,7 @@
                 'first_response_time',
                 'first_responded_on',
                 'response_by',
+                'resolution_by',
               ].includes(column.key)
             "
             class="truncate text-base"
