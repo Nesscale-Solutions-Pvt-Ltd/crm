@@ -266,26 +266,34 @@ watch(error, (err) => {
   }
 })
 
+// KIWI: recompute form-script actions when the fields that gate them change
+// (category decides eligibility; bb_share_status flips the Share button to the
+// "Shared" chip), not just once at load. Keyed on those fields so it does not
+// re-run on every keystroke. Re-apply after a crm upgrade — see the Resolution
+// column patch. Upstream used `{ once: true }` watching `document.doc`.
 watch(
-  () => document.doc,
-  async (_doc) => {
-    if (scripts.data?.length) {
-      let s = await setupCustomizations(scripts.data, {
-        doc: _doc,
-        $dialog,
-        $socket,
-        router,
-        toast,
-        updateField,
-        createToast: toast.create,
-        deleteDoc: deleteTicket,
-        call,
-      })
-      document._actions = s.actions || []
-      document._statuses = s.statuses || []
-    }
+  () => {
+    const d = document.doc || {}
+    return [d.name, d.category, d.bb_share_status].join('')
   },
-  { once: true },
+  async () => {
+    const _doc = document.doc
+    if (!_doc || !scripts.data?.length) return
+    let s = await setupCustomizations(scripts.data, {
+      doc: _doc,
+      $dialog,
+      $socket,
+      router,
+      toast,
+      updateField,
+      createToast: toast.create,
+      deleteDoc: deleteTicket,
+      call,
+    })
+    document._actions = s.actions || []
+    document._statuses = s.statuses || []
+  },
+  { immediate: true },
 )
 
 const breadcrumbs = computed(() => {
