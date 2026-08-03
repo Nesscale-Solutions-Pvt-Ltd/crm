@@ -456,6 +456,36 @@ export function evaluateDependsOnValue(expression, doc) {
   return out
 }
 
+/**
+ * Turn a Custom Field's `link_filters` into filters `search_link` understands.
+ *
+ * Desk stores them as `[[doctype, fieldname, operator, value]]` and resolves an
+ * `eval:` value against the current doc (see frappe's link.js `parse_filters`).
+ * Without this the raw value is sent verbatim, so a dependent filter such as
+ * `parent_ticket_category = eval:doc.category` matches nothing.
+ *
+ * The plain-object form (`{fieldname: value}`) is passed through untouched.
+ */
+export function parseLinkFilters(link_filters, doc) {
+  if (!link_filters) return link_filters
+  if (!Array.isArray(link_filters)) return link_filters
+
+  let filters = {}
+  for (let filter of link_filters) {
+    if (!Array.isArray(filter)) continue
+    let [, fieldname, operator, value] = filter
+    if (typeof value === 'string' && value.startsWith('eval:')) {
+      try {
+        value = _eval(value.slice(5), { doc: doc || {} })
+      } catch {
+        value = null
+      }
+    }
+    filters[fieldname] = [operator, value]
+  }
+  return filters
+}
+
 export function evaluateExpression(expression, doc, parent) {
   if (!expression) return false
   if (!doc) return false

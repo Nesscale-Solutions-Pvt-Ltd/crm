@@ -251,7 +251,7 @@ import TableMultiselectInput from '@/components/Controls/TableMultiselectInput.v
 import Link from '@/components/Controls/Link.vue'
 import Grid from '@/components/Controls/Grid.vue'
 import { createDocument } from '@/composables/document'
-import { getFormat, evaluateDependsOnValue } from '@/utils'
+import { getFormat, evaluateDependsOnValue, parseLinkFilters } from '@/utils'
 import { flt } from '@/utils/numberFormat.js'
 import { getMeta } from '@/stores/meta'
 import { usersStore } from '@/stores/users'
@@ -349,7 +349,7 @@ const field = computed(() => {
 
   let _field = {
     ...field,
-    filters: field.link_filters && resolveFilters(JSON.parse(field.link_filters), data.value),
+    filters: field.link_filters && resolveFilters(parseLinkFilters(JSON.parse(field.link_filters), data.value), data.value),
     placeholder: field.placeholder || field.label,
     display_via_depends_on: evaluateDependsOnValue(
       field.depends_on,
